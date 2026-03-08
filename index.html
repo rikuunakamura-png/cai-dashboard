@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Canal AI - 経営ダッシュボード</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: rgba(255,255,255,0.04);
+    --surface-hover: rgba(255,255,255,0.07);
+    --border: rgba(255,255,255,0.06);
+    --text: #e4e4e7;
+    --text-dim: #71717a;
+    --text-muted: #52525b;
+    --accent: #6366f1;
+    --accent-soft: rgba(99,102,241,0.12);
+    --green: #22c55e;
+    --green-soft: rgba(34,197,94,0.12);
+    --red: #ef4444;
+    --red-soft: rgba(239,68,68,0.12);
+    --amber: #f59e0b;
+    --amber-soft: rgba(245,158,11,0.12);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-weight: 300;
+    letter-spacing: 0.01em;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+    min-height: 100dvh;
+  }
+
+  /* Glass card */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    transition: background 0.2s;
+  }
+
+  /* Typography */
+  .num { font-variant-numeric: tabular-nums; }
+  .hero-num { font-size: 1.75rem; font-weight: 500; letter-spacing: -0.03em; line-height: 1; }
+  .big-num { font-size: 1.125rem; font-weight: 500; letter-spacing: -0.02em; }
+  .label { font-size: 0.6875rem; font-weight: 400; color: var(--text-dim); letter-spacing: 0.04em; text-transform: uppercase; }
+  .sublabel { font-size: 0.625rem; color: var(--text-muted); font-weight: 300; }
+
+  /* Status colors */
+  .up { color: var(--green); }
+  .down { color: var(--red); }
+  .warn { color: var(--amber); }
+  .up-bg { background: var(--green-soft); color: var(--green); }
+  .down-bg { background: var(--red-soft); color: var(--red); }
+
+  /* Progress bar */
+  .prog-track { height: 3px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
+  .prog-fill { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
+
+  /* Nav pills */
+  .pill-scroll { display: flex; gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding: 2px 0; }
+  .pill-scroll::-webkit-scrollbar { display: none; }
+  .pill {
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 400;
+    white-space: nowrap;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: transparent;
+    color: var(--text-muted);
+  }
+  .pill.active {
+    background: rgba(255,255,255,0.08);
+    color: var(--text);
+    border-color: rgba(255,255,255,0.12);
+  }
+
+  /* Tabs */
+  .tab-bar { display: flex; gap: 0; background: var(--surface); border-radius: 10px; padding: 3px; border: 1px solid var(--border); }
+  .tab {
+    flex: 1; padding: 6px 0; text-align: center; font-size: 0.75rem; font-weight: 400;
+    border-radius: 8px; cursor: pointer; transition: all 0.2s; color: var(--text-muted); background: transparent;
+    border: none;
+  }
+  .tab.active { background: rgba(255,255,255,0.1); color: var(--text); font-weight: 500; }
+
+  /* Table */
+  .tbl { width: 100%; border-collapse: collapse; }
+  .tbl th { text-align: left; padding: 8px 0; font-size: 0.625rem; font-weight: 400; color: var(--text-muted); letter-spacing: 0.06em; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+  .tbl th.r { text-align: right; }
+  .tbl td { padding: 10px 0; font-size: 0.8125rem; font-weight: 300; border-bottom: 1px solid var(--border); }
+  .tbl td.r { text-align: right; font-variant-numeric: tabular-nums; }
+  .tbl tr:last-child td { border-bottom: none; }
+  .tbl .row-total td { font-weight: 500; }
+  .tbl .row-sub td { font-size: 0.75rem; color: var(--text-dim); padding: 6px 0; }
+
+  /* Collapse */
+  .collapse-body { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+  .collapse-body.open { max-height: 600px; }
+
+  /* Sections */
+  .section-label {
+    font-size: 0.625rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 20px 0 8px;
+  }
+
+  /* Chart */
+  .chart-wrap { position: relative; width: 100%; }
+
+  /* KPI cell */
+  .kpi-cell { text-align: center; padding: 10px 4px; }
+  .kpi-val { font-size: 1.25rem; font-weight: 500; letter-spacing: -0.02em; }
+  .kpi-label { font-size: 0.5625rem; color: var(--text-muted); margin-bottom: 2px; letter-spacing: 0.04em; }
+  .kpi-sub { font-size: 0.5625rem; color: var(--text-muted); margin-top: 1px; }
+
+  /* Badge */
+  .badge {
+    display: inline-flex; align-items: center; gap: 3px;
+    font-size: 0.625rem; font-weight: 400; padding: 2px 7px;
+    border-radius: 6px; letter-spacing: 0.01em;
+  }
+
+  /* Scroll fade */
+  .fade-bottom { position: relative; }
+  .fade-bottom::after {
+    content: ''; position: fixed; bottom: 0; left: 0; right: 0; height: 40px;
+    background: linear-gradient(transparent, var(--bg)); pointer-events: none; z-index: 10;
+  }
+
+  /* Animation */
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .fade-up { animation: fadeUp 0.4s ease forwards; }
+  .fade-up-1 { animation-delay: 0.05s; opacity: 0; }
+  .fade-up-2 { animation-delay: 0.1s; opacity: 0; }
+  .fade-up-3 { animation-delay: 0.15s; opacity: 0; }
+  .fade-up-4 { animation-delay: 0.2s; opacity: 0; }
+
+  /* Safe area */
+  .safe-bottom { padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+</style>
+</head>
+<body class="fade-bottom safe-bottom">
+
+<!-- Header -->
+<header style="position:sticky;top:0;z-index:50;background:rgba(10,10,15,0.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:12px 16px 10px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+    <div>
+      <div style="font-size:0.625rem;font-weight:400;color:var(--text-muted);letter-spacing:0.08em;text-transform:uppercase;">Canal AI</div>
+      <div style="font-size:1rem;font-weight:500;letter-spacing:-0.02em;" id="header-title">経営ダッシュボード</div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:0.5625rem;color:var(--text-muted);">2026-03-08 15:41</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <div class="tab-bar" style="flex:0 0 auto;width:140px;">
+      <button class="tab active" id="tab-monthly" onclick="switchMode('monthly')">月次</button>
+      <button class="tab" id="tab-trend" onclick="switchMode('trend')">推移</button>
+    </div>
+    <div id="month-pills" class="pill-scroll" style="flex:1;"></div>
+  </div>
+</header>
+
+<!-- Monthly View -->
+<main id="view-monthly" style="padding:12px 16px;max-width:480px;margin:0 auto;">
+
+  <!-- Hero: Cash & Runway -->
+  <div id="hero-cash" class="card fade-up" style="padding:20px;margin-bottom:12px;"></div>
+
+  <!-- Key Metrics -->
+  <div id="key-metrics" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;"></div>
+
+  <!-- Annual Progress -->
+  <div id="annual-progress" class="card fade-up fade-up-2" style="padding:16px;margin-bottom:16px;"></div>
+
+  <!-- P/L -->
+  <div class="section-label">損益計算書</div>
+  <div class="card fade-up fade-up-3" style="padding:16px;margin-bottom:12px;">
+    <table class="tbl" id="pl-table"></table>
+  </div>
+
+  <!-- Funnel KPI -->
+  <div class="section-label">営業ファネル</div>
+  <div class="card fade-up fade-up-4" style="padding:16px;margin-bottom:12px;">
+    <div id="funnel-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:14px;"></div>
+    <div id="funnel-bar" style="margin-bottom:10px;"></div>
+  </div>
+
+  <!-- CS & Organization -->
+  <div class="section-label">組織</div>
+  <div class="card" style="padding:16px;margin-bottom:12px;">
+    <div id="org-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;"></div>
+  </div>
+
+  <!-- BS -->
+  <div class="section-label">貸借対照表</div>
+  <div class="card" style="padding:16px;margin-bottom:12px;">
+    <table class="tbl" id="bs-table"></table>
+  </div>
+
+  <!-- AR (collapsible) -->
+  <div class="card" style="padding:14px 16px;margin-bottom:20px;">
+    <button onclick="toggleCollapse('ar-detail')" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;color:var(--text-dim);font-size:0.75rem;font-weight:400;cursor:pointer;font-family:inherit;">
+      <span>売掛金明細</span>
+      <span id="ar-detail-icon" style="transition:transform 0.2s;font-size:0.625rem;">&#9660;</span>
+    </button>
+    <div id="ar-detail" class="collapse-body" style="margin-top:8px;">
+      <table class="tbl" id="ar-table"></table>
+    </div>
+  </div>
+</main>
+
+<!-- Trend View -->
+<main id="view-trend" style="padding:12px 16px;max-width:540px;margin:0 auto;display:none;">
+  <!-- Mini summary -->
+  <div id="trend-summary" class="card" style="padding:16px;margin-bottom:16px;"></div>
+
+  <div class="section-label">売上推移</div>
+  <div class="card" style="padding:16px;margin-bottom:12px;">
+    <div class="chart-wrap" style="height:200px;"><canvas id="chart-sales"></canvas></div>
+  </div>
+
+  <div class="section-label">営業利益推移</div>
+  <div class="card" style="padding:16px;margin-bottom:12px;">
+    <div class="chart-wrap" style="height:200px;"><canvas id="chart-op"></canvas></div>
+  </div>
+
+  <div class="section-label">現預金推移</div>
+  <div class="card" style="padding:16px;margin-bottom:12px;">
+    <div class="chart-wrap" style="height:180px;"><canvas id="chart-cash"></canvas></div>
+  </div>
+
+  <div class="section-label">KPI推移</div>
+  <div class="card" style="padding:16px;margin-bottom:12px;">
+    <div class="chart-wrap" style="height:200px;"><canvas id="chart-kpi"></canvas></div>
+  </div>
+
+  <div class="section-label">累計実績</div>
+  <div class="card" style="padding:16px;margin-bottom:24px;">
+    <table class="tbl" id="cum-table"></table>
+  </div>
+</main>
+
+<script>
+const D = {"1": {"month": 1, "sales": {"大阪府医師協同組合": 300000, "㈱スケールエーアイ": 105000, "㈱ヒトヒネリ": 100000}, "total_sales": 505000, "expenses": {"給料賃金": 1450000, "役員報酬": 480000, "法定福利費": 449095, "広告宣伝費": 65000, "旅費交通費": 60605, "通信費": 29949, "支払手数料": 116125, "会議費": 19310, "保険料": 30000, "支払報酬": 20000, "その他": 3928}, "total_exp": 2724012, "labor": 2379095, "ad": 65000, "other_admin": 279917, "special_income": 7000000, "op": -2219012, "gp_rate": -371.1, "bs_cash": 8284587, "bs_ar": 964450, "bs_ap": 1408846, "ar_detail": {}, "kpi": {"商談数": 7, "成約件数": 3, "アポ獲得件数": 2, "稼働案件数": 5, "新規顧客数": 3, "継続顧客数": 0, "リファラル件数": 0, "総人員数": 5, "リード獲得数": 9, "CS人数": 2}, "plan_sales": 3200000, "plan_exp": 4610000, "plan_op": -1410000, "plan_gp_rate": 29.4}, "2": {"month": 2, "sales": {"大阪府医師協同組合": 250000, "㈱スケールエーアイ": 55710, "㈱ヒトヒネリ": 100000, "その他/仮売上": 1760000}, "total_sales": 2165710, "expenses": {"給料賃金": 1261695, "役員報酬": 480000, "法定福利費": -87316, "広告宣伝費": 65000, "旅費交通費": 32468, "通信費": 31930, "支払手数料": 175152, "会議費": 23608, "租税公課": 2000, "その他": 934285}, "total_exp": 2918822, "labor": 1654379, "ad": 65000, "other_admin": 1199443, "special_income": 0, "op": -753112, "gp_rate": 23.6, "bs_cash": 6512824, "bs_ar": 1746231, "bs_ap": 1029706, "ar_detail": {}, "kpi": {"商談数": 14, "成約件数": 3, "アポ獲得件数": 9, "稼働案件数": 8, "新規顧客数": 3, "継続顧客数": 4, "リファラル件数": 2, "総人員数": 5, "リード獲得数": 14, "CS人数": 2}, "plan_sales": 4300000, "plan_exp": 4610000, "plan_op": -310000, "plan_gp_rate": 47.4}, "3": {"month": 3, "sales": {"その他/仮売上": 1180000}, "total_sales": 1180000, "expenses": {"法定福利費": 334019, "広告宣伝費": 5000, "通信費": 13709, "支払手数料": 12131}, "total_exp": 364859, "labor": 334019, "ad": 5000, "other_admin": 25840, "special_income": 0, "op": 815141, "gp_rate": 71.7, "bs_cash": 4871164, "bs_ar": 976231, "bs_ap": 1060657, "ar_detail": {}, "kpi": {"商談数": 17, "成約件数": 1, "アポ獲得件数": 7, "稼働案件数": 9, "新規顧客数": 1, "継続顧客数": 7, "リファラル件数": 0, "総人員数": 5, "リード獲得数": 4, "CS人数": 2}, "plan_sales": 5200000, "plan_exp": 4610000, "plan_op": 590000, "plan_gp_rate": 56.5}};
+const P = {"sales": [3200000, 4300000, 5200000, 7900000, 8800000, 8500000, 11200000, 10900000, 15200000, 14900000, 15600000, 14900000], "exp": [4610000, 4610000, 4610000, 5970000, 6420000, 6420000, 7330000, 8230000, 9140000, 9140000, 9140000, 9590000], "op": [-1410000, -310000, 590000, 1930000, 2380000, 2080000, 3870000, 2670000, 6060000, 5760000, 6460000, 5310000], "gp_rate": [29.4, 47.4, 56.5, 54.2, 53.8, 52.1, 55.5, 46.1, 55.3, 54.4, 56.5, 51.4], "staff": [5, 5, 5, 8, 9, 9, 11, 13, 15, 15, 15, 16], "cases": [4, 6, 7, 10, 11, 13, 16, 18, 22, 24, 24, 24], "apos": [20, 25, 30, 35, 40, 40, 45, 45, 50, 50, 45, 45], "deals": [3, 4, 5, 5, 6, 6, 7, 7, 8, 8, 7, 7], "leads": [10, 12, 15, 15, 18, 20, 22, 25, 20, 18, 15, 10], "cogs": [2260000, 2260000, 2260000, 3620000, 4070000, 4070000, 4980000, 5880000, 6790000, 6790000, 6790000, 7240000], "ad": [2350000, 2350000, 2350000, 2350000, 2350000, 2350000, 2350000, 2350000, 2350000, 2350000, 2350000, 2350000]};
+const MONTHS = [1, 2, 3];
+const LATEST = 3;
+const CPS = [3200000, 7500000, 12700000, 20600000, 29400000, 37900000, 49100000, 60000000, 75200000, 90100000, 105700000, 120600000];
+const CAS = [505000, 2670710, 3850710, 3850710, 3850710, 3850710, 3850710, 3850710, 3850710, 3850710, 3850710, 3850710];
+const CPO = [-1410000, -1720000, -1130000, 800000, 3180000, 5260000, 9130000, 11800000, 17860000, 23620000, 30080000, 35390000];
+const CAO = [-2219012, -2972124, -2156983, -2156983, -2156983, -2156983, -2156983, -2156983, -2156983, -2156983, -2156983, -2156983];
+const APS = 120600000;
+
+let cur = LATEST, mode = 'monthly', charts = {};
+
+// --- Fmt ---
+const n = v => v == null ? '-' : v;
+const man = v => {
+  if (v == null) return '-';
+  const a = Math.abs(v);
+  if (a >= 100000000) return (v/100000000).toFixed(2)+'億';
+  if (a >= 10000) return (v/10000).toFixed(v%10000===0&&a>=100000?0:1)+'万';
+  return v.toLocaleString();
+};
+const pct = (a,b) => b ? Math.round(a/b*100) : 0;
+const sign = v => v > 0 ? '+' : '';
+const vc = v => v >= 0 ? 'up' : 'down';
+const vbc = v => v >= 0 ? 'up-bg' : 'down-bg';
+
+// --- Pills ---
+function renderPills() {
+  document.getElementById('month-pills').innerHTML = MONTHS.map(m =>
+    `<button class="pill ${m===cur?'active':''}" onclick="sel(${m})">${m}月</button>`
+  ).join('');
+}
+function sel(m) { cur=m; renderPills(); renderMonthly(); }
+
+// --- Swipe ---
+let tx=0;
+document.addEventListener('touchstart',e=>{tx=e.touches[0].clientX;});
+document.addEventListener('touchend',e=>{
+  if(mode!=='monthly')return;
+  const dx=e.changedTouches[0].clientX-tx;
+  if(Math.abs(dx)<60)return;
+  const i=MONTHS.indexOf(cur);
+  if(dx<0&&i<MONTHS.length-1) sel(MONTHS[i+1]);
+  if(dx>0&&i>0) sel(MONTHS[i-1]);
+});
+
+// --- Mode ---
+function switchMode(m) {
+  mode=m;
+  document.getElementById('tab-monthly').className='tab'+(m==='monthly'?' active':'');
+  document.getElementById('tab-trend').className='tab'+(m==='trend'?' active':'');
+  document.getElementById('view-monthly').style.display=m==='monthly'?'block':'none';
+  document.getElementById('view-trend').style.display=m==='trend'?'block':'none';
+  document.getElementById('month-pills').style.display=m==='monthly'?'flex':'none';
+  document.getElementById('header-title').textContent=m==='monthly'?`${cur}月 経営ダッシュボード`:'推移分析';
+  if(m==='trend') renderTrend();
+}
+
+// --- Collapse ---
+function toggleCollapse(id) {
+  const el=document.getElementById(id);
+  el.classList.toggle('open');
+  document.getElementById(id+'-icon').style.transform=el.classList.contains('open')?'rotate(180deg)':'';
+}
+
+// --- Progress Ring SVG ---
+function ring(pctVal, color, size=56) {
+  const r = (size-6)/2;
+  const c = 2*Math.PI*r;
+  const p = Math.max(0, Math.min(pctVal, 100));
+  const off = c - (p/100)*c;
+  return `<svg width="${size}" height="${size}" style="transform:rotate(-90deg)">
+    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="3"/>
+    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round"
+      stroke-dasharray="${c}" stroke-dashoffset="${off}" style="transition:stroke-dashoffset 0.8s ease"/>
+  </svg>`;
+}
+
+// --- Funnel Bar ---
+function funnelBar(stages) {
+  const max = Math.max(...stages.map(s=>s.val), 1);
+  return stages.map(s => {
+    const w = Math.max(4, s.val/max*100);
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <div style="width:48px;font-size:0.625rem;color:var(--text-muted);text-align:right;">${s.label}</div>
+      <div style="flex:1;height:14px;background:rgba(255,255,255,0.04);border-radius:4px;overflow:hidden;">
+        <div style="width:${w}%;height:100%;background:${s.color};border-radius:4px;transition:width 0.6s ease;"></div>
+      </div>
+      <div style="width:28px;font-size:0.75rem;font-weight:400;text-align:right;" class="num">${s.val}</div>
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
+// Monthly
+// ============================================================
+function renderMonthly() {
+  const d = D[cur]; if(!d) return;
+  const mi = cur-1;
+  document.getElementById('header-title').textContent = `${cur}月 経営ダッシュボード`;
+
+  // --- Hero: Cash ---
+  const burnRate = d.total_exp;
+  const runway = burnRate > 0 ? d.bs_cash / burnRate : 99;
+  const runwayColor = runway >= 6 ? 'var(--green)' : runway >= 3 ? 'var(--amber)' : 'var(--red)';
+  const runwayLabel = runway >= 6 ? '安全' : runway >= 3 ? '注意' : '危険';
+  const prevCash = MONTHS.indexOf(cur) > 0 ? D[MONTHS[MONTHS.indexOf(cur)-1]]?.bs_cash : null;
+  const cashDelta = prevCash != null ? d.bs_cash - prevCash : null;
+
+  document.getElementById('hero-cash').innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div class="label">手元資金</div>
+        <div class="hero-num num" style="margin:4px 0;">&yen;${man(d.bs_cash)}</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          ${cashDelta != null ? `<span class="badge ${vbc(cashDelta)}">${sign(cashDelta)}${man(cashDelta)}</span>` : ''}
+          <span style="font-size:0.625rem;color:var(--text-muted);">月間支出 &yen;${man(burnRate)}</span>
+        </div>
+      </div>
+      <div style="text-align:center;">
+        ${ring(Math.min(runway/12*100, 100), runwayColor)}
+        <div style="font-size:0.6875rem;font-weight:500;color:${runwayColor};margin-top:-38px;position:relative;">${runway.toFixed(1)}</div>
+        <div style="font-size:0.5rem;color:var(--text-muted);margin-top:18px;">ランウェイ(月)</div>
+      </div>
+    </div>
+  `;
+
+  // --- Key Metrics (2x2) ---
+  const salesAch = pct(d.total_sales, d.plan_sales);
+  const salesVar = d.total_sales - d.plan_sales;
+  const opVar = d.op - d.plan_op;
+  const cases = d.kpi['稼働案件数']||0;
+  const casePlan = P.cases[mi];
+
+  document.getElementById('key-metrics').innerHTML = `
+    <div class="card fade-up fade-up-1" style="padding:14px 16px;">
+      <div class="label">売上高</div>
+      <div class="big-num num" style="margin:3px 0;">&yen;${man(d.total_sales)}</div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="badge ${vbc(salesVar)}">${salesAch}%</span>
+        <span class="sublabel">計画 &yen;${man(d.plan_sales)}</span>
+      </div>
+      <div class="prog-track" style="margin-top:8px;"><div class="prog-fill" style="width:${Math.min(salesAch,150)}%;background:${salesAch>=80?'var(--green)':'var(--red)'};"></div></div>
+    </div>
+    <div class="card fade-up fade-up-1" style="padding:14px 16px;">
+      <div class="label">営業利益</div>
+      <div class="big-num num ${d.op>=0?'up':'down'}" style="margin:3px 0;">&yen;${man(d.op)}</div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="badge ${vbc(opVar)}">${sign(opVar)}${man(opVar)}</span>
+      </div>
+      <div class="prog-track" style="margin-top:8px;"><div class="prog-fill" style="width:${d.plan_op>0?Math.min(Math.max(pct(d.op,d.plan_op),0),150):0}%;background:${d.op>=0?'var(--green)':'var(--red)'};"></div></div>
+    </div>
+    <div class="card fade-up fade-up-2" style="padding:14px 16px;">
+      <div class="label">稼働案件</div>
+      <div class="big-num num" style="margin:3px 0;">${cases}</div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="badge ${vbc(cases-casePlan)}">${sign(cases-casePlan)}${cases-casePlan}</span>
+        <span class="sublabel">目標 ${casePlan}</span>
+      </div>
+    </div>
+    <div class="card fade-up fade-up-2" style="padding:14px 16px;">
+      <div class="label">粗利率</div>
+      <div class="big-num num" style="margin:3px 0;">${d.gp_rate}%</div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="sublabel">計画 ${P.gp_rate[mi]}%</span>
+      </div>
+      <div class="prog-track" style="margin-top:8px;"><div class="prog-fill" style="width:${Math.min(Math.max(d.gp_rate,0),100)}%;background:${d.gp_rate>=P.gp_rate[mi]?'var(--green)':'var(--amber)'};"></div></div>
+    </div>
+  `;
+
+  // --- Annual Progress ---
+  const cumSales = CAS[cur-1];
+  const cumPlan = CPS[cur-1];
+  const annualPct = pct(cumSales, APS);
+  const monthPct = pct(cur, 12);
+
+  document.getElementById('annual-progress').innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div>
+        <div class="label">年間計画 進捗</div>
+        <div style="font-size:0.8125rem;font-weight:400;margin-top:2px;">
+          <span class="num" style="font-weight:500;">&yen;${man(cumSales)}</span>
+          <span style="color:var(--text-muted);"> / &yen;${man(APS)}</span>
+        </div>
+      </div>
+      <div style="font-size:1.5rem;font-weight:500;letter-spacing:-0.03em;" class="num ${annualPct>=monthPct?'up':'down'}">${annualPct}%</div>
+    </div>
+    <div class="prog-track" style="height:4px;">
+      <div class="prog-fill" style="width:${Math.min(annualPct,100)}%;background:linear-gradient(90deg,var(--accent),#a78bfa);"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:4px;">
+      <span class="sublabel">期間経過 ${monthPct}%</span>
+      <span class="sublabel">${cur}月時点の計画 &yen;${man(cumPlan)}</span>
+    </div>
+  `;
+
+  // --- P/L ---
+  const pe = d.plan_exp;
+  document.getElementById('pl-table').innerHTML = `
+    <thead><tr><th></th><th class="r">計画</th><th class="r">実績</th><th class="r"></th></tr></thead>
+    <tbody>
+      <tr><td style="font-weight:400;">売上高</td><td class="r num" style="color:var(--text-dim);">${man(d.plan_sales)}</td><td class="r num" style="font-weight:500;">${man(d.total_sales)}</td><td class="r"><span class="badge ${vbc(d.total_sales-d.plan_sales)}">${pct(d.total_sales,d.plan_sales)}%</span></td></tr>
+      <tr class="row-sub"><td style="padding-left:12px;">人件費</td><td class="r num">${man(P.cogs[mi])}</td><td class="r num">${man(d.labor)}</td><td></td></tr>
+      <tr class="row-sub"><td style="padding-left:12px;">広告宣伝費</td><td class="r num">${man(P.ad[mi])}</td><td class="r num">${man(d.ad)}</td><td></td></tr>
+      <tr class="row-sub"><td style="padding-left:12px;">その他</td><td class="r num">-</td><td class="r num">${man(d.other_admin)}</td><td></td></tr>
+      <tr><td style="font-weight:400;">販管費</td><td class="r num" style="color:var(--text-dim);">${man(pe)}</td><td class="r num" style="font-weight:500;">${man(d.total_exp)}</td><td class="r"><span class="badge ${vbc(pe-d.total_exp)}">${pct(d.total_exp,pe)}%</span></td></tr>
+      <tr class="row-total" style="border-top:1px solid var(--border);"><td>営業利益</td><td class="r num" style="color:var(--text-dim);">${man(d.plan_op)}</td><td class="r num ${d.op>=0?'up':'down'}">${man(d.op)}</td><td class="r"><span class="badge ${vbc(d.op-d.plan_op)}">${sign(d.op-d.plan_op)}${man(d.op-d.plan_op)}</span></td></tr>
+      ${d.special_income ? `<tr class="row-sub"><td>特別利益</td><td></td><td class="r num">${man(d.special_income)}</td><td></td></tr>` : ''}
+    </tbody>
+  `;
+
+  // --- Funnel ---
+  const k = d.kpi;
+  const leads = k['リード獲得数']||0;
+  const apos = k['アポ獲得件数']||0;
+  const deals_count = k['商談数']||0;
+  const wins = k['成約件数']||0;
+  const dealRate = deals_count > 0 ? (wins/deals_count*100).toFixed(0) : '-';
+
+  document.getElementById('funnel-grid').innerHTML = `
+    <div class="kpi-cell"><div class="kpi-label">リード</div><div class="kpi-val num">${leads}</div><div class="kpi-sub">/${P.leads[mi]}</div></div>
+    <div class="kpi-cell"><div class="kpi-label">アポ</div><div class="kpi-val num">${apos}</div><div class="kpi-sub">/${P.apos[mi]}</div></div>
+    <div class="kpi-cell"><div class="kpi-label">商談</div><div class="kpi-val num">${deals_count}</div></div>
+    <div class="kpi-cell"><div class="kpi-label">成約</div><div class="kpi-val num ${wins>=P.deals[mi]?'up':''}">${wins}</div><div class="kpi-sub">/${P.deals[mi]} (${dealRate}%)</div></div>
+  `;
+
+  document.getElementById('funnel-bar').innerHTML = funnelBar([
+    { label:'リード', val:leads, color:'#818cf8' },
+    { label:'アポ', val:apos, color:'#38bdf8' },
+    { label:'商談', val:deals_count, color:'#fbbf24' },
+    { label:'成約', val:wins, color:'#22c55e' },
+  ]);
+
+  // --- Org ---
+  const csPerCase = k['CS人数']>0 ? (k['稼働案件数']/k['CS人数']).toFixed(1) : '-';
+  document.getElementById('org-grid').innerHTML = `
+    <div class="kpi-cell"><div class="kpi-label">人員数</div><div class="kpi-val num">${k['総人員数']||0}</div><div class="kpi-sub">/${P.staff[mi]}</div></div>
+    <div class="kpi-cell"><div class="kpi-label">CS人数</div><div class="kpi-val num">${k['CS人数']||0}</div></div>
+    <div class="kpi-cell"><div class="kpi-label">CS1人あたり</div><div class="kpi-val num">${csPerCase}</div></div>
+  `;
+
+  // --- BS ---
+  document.getElementById('bs-table').innerHTML = `<tbody>
+    <tr><td>現預金</td><td class="r num" style="font-weight:500;">&yen;${man(d.bs_cash)}</td></tr>
+    <tr><td>売掛金</td><td class="r num">&yen;${man(d.bs_ar)}</td></tr>
+    <tr><td>未払金</td><td class="r num">&yen;${man(d.bs_ap)}</td></tr>
+  </tbody>`;
+
+  // --- AR ---
+  const ar = Object.entries(d.ar_detail||{});
+  document.getElementById('ar-table').innerHTML = ar.length
+    ? `<tbody>${ar.map(([n,v])=>`<tr><td>${n}</td><td class="r num">&yen;${man(v)}</td></tr>`).join('')}</tbody>`
+    : '<tbody><tr><td style="color:var(--text-muted);font-size:0.75rem;">明細データなし</td></tr></tbody>';
+}
+
+// ============================================================
+// Trend
+// ============================================================
+function renderTrend() {
+  const lbl = Array.from({length:12},(_,i)=>(i+1)+'月');
+  const aS = lbl.map((_,i)=>D[i+1]?D[i+1].total_sales/10000:null);
+  const aO = lbl.map((_,i)=>D[i+1]?D[i+1].op/10000:null);
+  const aC = lbl.map((_,i)=>D[i+1]?D[i+1].bs_cash/10000:null);
+
+  Object.values(charts).forEach(c=>c.destroy());
+  charts = {};
+
+  const base = {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{
+      legend:{ labels:{ color:'#71717a', font:{ family:'Inter', size:10, weight:300 }, boxWidth:8, boxHeight:8, padding:12 } }
+    },
+    scales:{
+      x:{ ticks:{ color:'#52525b', font:{ family:'Inter', size:9, weight:300 } }, grid:{ color:'rgba(255,255,255,0.03)' } },
+      y:{ ticks:{ color:'#52525b', font:{ family:'Inter', size:9, weight:300 } }, grid:{ color:'rgba(255,255,255,0.03)' } }
+    }
+  };
+
+  charts.sales = new Chart(document.getElementById('chart-sales'), {
+    type:'bar', data:{ labels:lbl, datasets:[
+      { label:'計画', data:P.sales.map(v=>v/10000), backgroundColor:'rgba(99,102,241,0.15)', borderColor:'rgba(99,102,241,0.4)', borderWidth:1, borderRadius:4 },
+      { label:'実績', data:aS, backgroundColor:'rgba(99,102,241,0.7)', borderColor:'#6366f1', borderWidth:1, borderRadius:4 }
+    ]}, options:base
+  });
+
+  charts.op = new Chart(document.getElementById('chart-op'), {
+    type:'bar', data:{ labels:lbl, datasets:[
+      { label:'計画', data:P.op.map(v=>v/10000), backgroundColor:'rgba(34,197,94,0.15)', borderColor:'rgba(34,197,94,0.4)', borderWidth:1, borderRadius:4 },
+      { label:'実績', data:aO, backgroundColor:'rgba(34,197,94,0.7)', borderColor:'#22c55e', borderWidth:1, borderRadius:4 }
+    ]}, options:base
+  });
+
+  charts.cash = new Chart(document.getElementById('chart-cash'), {
+    type:'line', data:{ labels:lbl, datasets:[{
+      label:'現預金', data:aC, borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,0.06)',
+      fill:true, tension:0.4, pointRadius:3, pointBackgroundColor:'#f59e0b', borderWidth:2
+    }]}, options:base
+  });
+
+  charts.kpi = new Chart(document.getElementById('chart-kpi'), {
+    type:'line', data:{ labels:lbl, datasets:[
+      { label:'リード', data:lbl.map((_,i)=>D[i+1]?D[i+1].kpi['リード獲得数']:null), borderColor:'#818cf8', tension:0.4, pointRadius:2, borderWidth:1.5 },
+      { label:'アポ', data:lbl.map((_,i)=>D[i+1]?D[i+1].kpi['アポ獲得件数']:null), borderColor:'#38bdf8', tension:0.4, pointRadius:2, borderWidth:1.5 },
+      { label:'成約', data:lbl.map((_,i)=>D[i+1]?D[i+1].kpi['成約件数']:null), borderColor:'#22c55e', tension:0.4, pointRadius:2, borderWidth:1.5 },
+      { label:'稼働案件', data:lbl.map((_,i)=>D[i+1]?D[i+1].kpi['稼働案件数']:null), borderColor:'#fb923c', tension:0.4, pointRadius:2, borderWidth:1.5 }
+    ]}, options:base
+  });
+
+  // Trend summary
+  const lm = MONTHS[MONTHS.length-1];
+  const cs = CAS[lm-1], ps = CPS[lm-1];
+  const co = CAO[lm-1], po = CPO[lm-1];
+  const prog = APS>0?(cs/APS*100).toFixed(1):'-';
+
+  document.getElementById('trend-summary').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;text-align:center;">
+      <div><div class="label">累計売上</div><div class="big-num num" style="margin-top:4px;">&yen;${man(cs)}</div><div class="sublabel">/${man(ps)} (${ps?Math.round(cs/ps*100):'-'}%)</div></div>
+      <div><div class="label">累計損益</div><div class="big-num num ${co>=0?'up':'down'}" style="margin-top:4px;">&yen;${man(co)}</div></div>
+      <div><div class="label">年間進捗</div><div class="big-num num" style="margin-top:4px;">${prog}%</div><div class="sublabel">&yen;${man(APS)}</div></div>
+    </div>
+  `;
+
+  document.getElementById('cum-table').innerHTML = `
+    <thead><tr><th></th><th class="r">計画</th><th class="r">実績</th><th class="r"></th></tr></thead>
+    <tbody>
+      <tr><td>累計売上</td><td class="r num">${man(ps)}</td><td class="r num" style="font-weight:500;">${man(cs)}</td><td class="r"><span class="badge ${vbc(cs-ps)}">${ps?Math.round(cs/ps*100):'-'}%</span></td></tr>
+      <tr><td>累計利益</td><td class="r num">${man(po)}</td><td class="r num ${co>=0?'up':'down'}" style="font-weight:500;">${man(co)}</td><td class="r"><span class="badge ${vbc(co-po)}">${sign(co-po)}${man(co-po)}</span></td></tr>
+      <tr class="row-total"><td>年間進捗</td><td class="r num">${man(APS)}</td><td class="r num" style="font-weight:500;">${man(cs)}</td><td class="r" style="font-weight:500;">${prog}%</td></tr>
+    </tbody>
+  `;
+}
+
+// --- Init ---
+renderPills();
+renderMonthly();
+</script>
+</body>
+</html>
