@@ -166,7 +166,7 @@
     </div>
     <div style="text-align:right;">
       <div style="font-size:0.5625rem;color:var(--text-muted);line-height:1.6;">最終更新</div>
-      <div style="font-size:0.6875rem;color:var(--text-dim);font-weight:400;">2026-03-08 16:11</div>
+      <div style="font-size:0.6875rem;color:var(--text-dim);font-weight:400;">2026-03-08 16:29</div>
     </div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;">
@@ -229,7 +229,7 @@
   <!-- Footer -->
   <div style="text-align:center;padding:20px 0 8px;border-top:1px solid var(--border);margin-top:8px;">
     <div style="font-size:0.6875rem;font-weight:500;color:var(--text-dim);">株式会社キャナルAI</div>
-    <div style="font-size:0.5625rem;color:var(--text-muted);margin-top:2px;">Canal AI Inc. | 最終更新: 2026-03-08 16:11</div>
+    <div style="font-size:0.5625rem;color:var(--text-muted);margin-top:2px;">Canal AI Inc. | 最終更新: 2026-03-08 16:29</div>
   </div>
 </main>
 
@@ -248,9 +248,10 @@
     <div class="chart-wrap" style="height:200px;"><canvas id="chart-op"></canvas></div>
   </div>
 
-  <div class="section-label">現預金推移</div>
+  <div class="section-label">資金繰り予測</div>
   <div class="card" style="padding:16px;margin-bottom:12px;">
-    <div class="chart-wrap" style="height:180px;"><canvas id="chart-cash"></canvas></div>
+    <div class="chart-wrap" style="height:220px;"><canvas id="chart-cash"></canvas></div>
+    <div id="cf-summary" style="margin-top:10px;font-size:0.6875rem;color:var(--text-dim);line-height:1.6;"></div>
   </div>
 
   <div class="section-label">KPI推移</div>
@@ -266,7 +267,7 @@
   <!-- Footer -->
   <div style="text-align:center;padding:20px 0 8px;border-top:1px solid var(--border);margin-top:8px;">
     <div style="font-size:0.6875rem;font-weight:500;color:var(--text-dim);">株式会社キャナルAI</div>
-    <div style="font-size:0.5625rem;color:var(--text-muted);margin-top:2px;">Canal AI Inc. | 最終更新: 2026-03-08 16:11</div>
+    <div style="font-size:0.5625rem;color:var(--text-muted);margin-top:2px;">Canal AI Inc. | 最終更新: 2026-03-08 16:29</div>
   </div>
 </main>
 
@@ -563,12 +564,64 @@ function renderTrend() {
     ]}, options:base
   });
 
+  // --- Cash Forecast ---
+  const lastActualIdx = MONTHS[MONTHS.length-1] - 1; // 0-based
+  const lastCash = aC[lastActualIdx] || 0; // in 万
+
+  // 計画シナリオ: plan sales - plan exp (千円→万円 = /10)
+  const planProj = Array(12).fill(null);
+  planProj[lastActualIdx] = lastCash;
+  for (let i = lastActualIdx + 1; i < 12; i++) {
+    planProj[i] = planProj[i-1] + (P.sales[i] - P.exp[i]) / 10000;
+  }
+
+  // 保守シナリオ: 直近実績月の営業利益平均
+  const recentOps = MONTHS.map(m => D[m].op / 10000);
+  const avgOp = recentOps.length > 0 ? recentOps.slice(-3).reduce((a,b)=>a+b,0) / Math.min(recentOps.length, 3) : 0;
+  const consProj = Array(12).fill(null);
+  consProj[lastActualIdx] = lastCash;
+  for (let i = lastActualIdx + 1; i < 12; i++) {
+    consProj[i] = consProj[i-1] + avgOp;
+  }
+
   charts.cash = new Chart(document.getElementById('chart-cash'), {
-    type:'line', data:{ labels:lbl, datasets:[{
-      label:'現預金', data:aC, borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,0.06)',
-      fill:true, tension:0.4, pointRadius:3, pointBackgroundColor:'#f59e0b', borderWidth:2
-    }]}, options:base
+    type:'line', data:{ labels:lbl, datasets:[
+      {
+        label:'実績', data:aC, borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,0.06)',
+        fill:true, tension:0.4, pointRadius:3, pointBackgroundColor:'#f59e0b', borderWidth:2
+      },
+      {
+        label:'計画予測', data:planProj, borderColor:'#a78bfa', backgroundColor:'transparent',
+        borderDash:[6,4], tension:0.4, pointRadius:2, pointBackgroundColor:'#a78bfa', borderWidth:2, fill:false
+      },
+      {
+        label:'保守予測', data:consProj, borderColor:'#71717a', backgroundColor:'transparent',
+        borderDash:[4,4], tension:0.4, pointRadius:2, pointBackgroundColor:'#71717a', borderWidth:1.5, fill:false
+      }
+    ]}, options:base
   });
+
+  // --- CF Summary ---
+  const lastForecastIdx = 11;
+  const planEnd = planProj[lastForecastIdx];
+  const consEnd = consProj[lastForecastIdx];
+  const planEndMonth = 12;
+  const consEndMonth = 12;
+
+  // 資金枯渇チェック（保守シナリオ）
+  let depletionMonth = null;
+  for (let i = lastActualIdx + 1; i < 12; i++) {
+    if (consProj[i] !== null && consProj[i] < 0) {
+      depletionMonth = i + 1; // 1-based month
+      break;
+    }
+  }
+
+  let cfText = `計画: ${planEndMonth}月末 &yen;${planEnd !== null ? planEnd.toFixed(0) : '-'}万 / 保守: ${consEndMonth}月末 &yen;${consEnd !== null ? consEnd.toFixed(0) : '-'}万`;
+  if (depletionMonth) {
+    cfText += ` <span style="color:var(--amber);">&#9888; 保守シナリオで${depletionMonth}月に資金不足</span>`;
+  }
+  document.getElementById('cf-summary').innerHTML = cfText;
 
   charts.kpi = new Chart(document.getElementById('chart-kpi'), {
     type:'line', data:{ labels:lbl, datasets:[
