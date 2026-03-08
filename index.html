@@ -166,7 +166,7 @@
     </div>
     <div style="text-align:right;">
       <div style="font-size:0.5625rem;color:var(--text-muted);line-height:1.6;">最終更新</div>
-      <div style="font-size:0.6875rem;color:var(--text-dim);font-weight:400;">2026-03-08 16:29</div>
+      <div style="font-size:0.6875rem;color:var(--text-dim);font-weight:400;">2026-03-08 16:40</div>
     </div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;">
@@ -229,7 +229,7 @@
   <!-- Footer -->
   <div style="text-align:center;padding:20px 0 8px;border-top:1px solid var(--border);margin-top:8px;">
     <div style="font-size:0.6875rem;font-weight:500;color:var(--text-dim);">株式会社キャナルAI</div>
-    <div style="font-size:0.5625rem;color:var(--text-muted);margin-top:2px;">Canal AI Inc. | 最終更新: 2026-03-08 16:29</div>
+    <div style="font-size:0.5625rem;color:var(--text-muted);margin-top:2px;">Canal AI Inc. | 最終更新: 2026-03-08 16:40</div>
   </div>
 </main>
 
@@ -267,7 +267,7 @@
   <!-- Footer -->
   <div style="text-align:center;padding:20px 0 8px;border-top:1px solid var(--border);margin-top:8px;">
     <div style="font-size:0.6875rem;font-weight:500;color:var(--text-dim);">株式会社キャナルAI</div>
-    <div style="font-size:0.5625rem;color:var(--text-muted);margin-top:2px;">Canal AI Inc. | 最終更新: 2026-03-08 16:29</div>
+    <div style="font-size:0.5625rem;color:var(--text-muted);margin-top:2px;">Canal AI Inc. | 最終更新: 2026-03-08 16:40</div>
   </div>
 </main>
 
@@ -374,7 +374,16 @@ function renderMonthly() {
   document.getElementById('header-title').textContent = `${cur}月 経営ダッシュボード`;
 
   // --- Hero: Cash ---
-  const burnRate = d.total_exp;
+  // 当月費用が前月平均の50%未満なら未確定→前月までの平均費用をバーンレートに使う
+  let burnRate = d.total_exp;
+  const curIdx = MONTHS.indexOf(cur);
+  if (curIdx >= 1) {
+    const prevExps = MONTHS.slice(0, curIdx).map(pm => D[pm].total_exp);
+    const avgPrevExp = prevExps.reduce((a,b)=>a+b,0) / prevExps.length;
+    if (d.total_exp < avgPrevExp * 0.5) {
+      burnRate = avgPrevExp; // 未確定月は前月平均で代用
+    }
+  }
   const runway = burnRate > 0 ? d.bs_cash / burnRate : 99;
   const runwayColor = runway >= 6 ? 'var(--green)' : runway >= 3 ? 'var(--amber)' : 'var(--red)';
   const runwayLabel = runway >= 6 ? '安全' : runway >= 3 ? '注意' : '危険';
@@ -575,8 +584,18 @@ function renderTrend() {
     planProj[i] = planProj[i-1] + (P.sales[i] - P.exp[i]) / 10000;
   }
 
-  // 保守シナリオ: 直近実績月の営業利益平均
-  const recentOps = MONTHS.map(m => D[m].op / 10000);
+  // 保守シナリオ: 完了月の営業利益平均（当月は未確定の可能性あり→除外判定）
+  // 最新月の費用がそれ以前の平均の50%未満なら未確定と判定
+  let completeMonths = [...MONTHS];
+  if (MONTHS.length >= 2) {
+    const lastM = MONTHS[MONTHS.length-1];
+    const prevExps = MONTHS.slice(0,-1).map(m => D[m].total_exp);
+    const avgPrevExp = prevExps.reduce((a,b)=>a+b,0) / prevExps.length;
+    if (D[lastM].total_exp < avgPrevExp * 0.5) {
+      completeMonths = MONTHS.slice(0,-1); // 最新月を除外
+    }
+  }
+  const recentOps = completeMonths.map(m => D[m].op / 10000);
   const avgOp = recentOps.length > 0 ? recentOps.slice(-3).reduce((a,b)=>a+b,0) / Math.min(recentOps.length, 3) : 0;
   const consProj = Array(12).fill(null);
   consProj[lastActualIdx] = lastCash;
