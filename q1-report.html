@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>キャナルAI Q1財務報告</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #0a0a0f; color: #f4f4f5; padding: 20px; max-width: 800px; margin: 0 auto; }
+h1 { font-size: 22px; margin-bottom: 4px; }
+.subtitle { color: #71717a; font-size: 13px; margin-bottom: 24px; }
+h2 { font-size: 16px; color: #a78bfa; margin: 24px 0 12px; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.card { background: rgba(255,255,255,0.05); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+.summary-row { display: flex; gap: 8px; margin-bottom: 16px; }
+.summary-card { flex: 1; background: rgba(255,255,255,0.05); border-radius: 12px; padding: 14px; text-align: center; }
+.summary-label { font-size: 11px; color: #a1a1aa; margin-bottom: 4px; }
+.summary-value { font-size: 22px; font-weight: 700; }
+.red { color: #ef4444; }
+.green { color: #22c55e; }
+.yellow { color: #eab308; }
+.blue { color: #3b82f6; }
+.purple { color: #a78bfa; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; color: #a1a1aa; font-weight: 500; padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+td { padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.right { text-align: right; }
+.bar-container { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+.bar-track { flex: 1; height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; }
+.bar-fill { height: 8px; border-radius: 4px; }
+.bar-label { font-size: 12px; color: #a1a1aa; min-width: 60px; }
+.bar-value { font-size: 12px; font-weight: 600; min-width: 40px; text-align: right; }
+.alert { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; padding: 12px; margin: 12px 0; font-size: 13px; }
+.alert-title { font-weight: 700; color: #ef4444; margin-bottom: 4px; }
+.action { background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); border-radius: 8px; padding: 12px; margin: 8px 0; }
+.action-title { font-weight: 700; color: #3b82f6; margin-bottom: 4px; font-size: 13px; }
+.action li { font-size: 13px; margin: 4px 0 4px 16px; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+.tag-s { background: rgba(255,215,0,0.15); color: #FFD700; }
+.tag-a { background: rgba(34,197,94,0.15); color: #22c55e; }
+.tag-b { background: rgba(59,130,246,0.15); color: #3b82f6; }
+.footer { text-align: center; color: #52525b; font-size: 11px; margin-top: 32px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.05); }
+</style>
+</head>
+<body>
+
+<h1>株式会社キャナルAI</h1>
+<div class="subtitle">2026年度 Q1 財務報告 ─ 2026年3月30日作成</div>
+
+<!-- Summary Cards -->
+<div class="summary-row">
+  <div class="summary-card">
+    <div class="summary-label">Q1累計売上</div>
+    <div class="summary-value">267<span style="font-size:14px">万円</span></div>
+  </div>
+  <div class="summary-card">
+    <div class="summary-label">現預金残高</div>
+    <div class="summary-value red">317<span style="font-size:14px">万円</span></div>
+  </div>
+  <div class="summary-card">
+    <div class="summary-label">MRR</div>
+    <div class="summary-value blue">133<span style="font-size:14px">万円</span></div>
+  </div>
+  <div class="summary-card">
+    <div class="summary-label">稼働案件</div>
+    <div class="summary-value green">9<span style="font-size:14px">件</span></div>
+  </div>
+</div>
+
+<h2>📊 月次損益（MF実績）</h2>
+<div class="card">
+<table>
+<tr><th>項目</th><th class="right">1月</th><th class="right">2月</th><th class="right">3月*</th><th class="right">Q1累計</th></tr>
+<tr><td>売上高</td><td class="right">50.5万</td><td class="right">216.6万</td><td class="right">0万*</td><td class="right">267.1万</td></tr>
+<tr><td>販管費</td><td class="right">272.7万</td><td class="right">344.6万</td><td class="right">194.4万</td><td class="right">811.7万</td></tr>
+<tr><td style="font-weight:600">営業利益</td><td class="right red">▲222.2万</td><td class="right red">▲127.9万</td><td class="right red">▲194.4万</td><td class="right red" style="font-weight:700">▲544.5万</td></tr>
+<tr><td>特別利益</td><td class="right green">700.0万</td><td class="right">—</td><td class="right">—</td><td class="right green">700.0万</td></tr>
+<tr><td style="font-weight:600">当期純利益</td><td class="right green">477.8万</td><td class="right red">▲127.4万</td><td class="right red">▲194.4万</td><td class="right green" style="font-weight:700">156.0万</td></tr>
+</table>
+<div style="font-size:11px;color:#71717a;margin-top:8px">*3月は売上仕訳が未入力のため0円表示</div>
+</div>
+
+<h2>💰 資金繰り</h2>
+<div class="card">
+<table>
+<tr><th>項目</th><th class="right">1月</th><th class="right">2月</th><th class="right">3月</th></tr>
+<tr><td>現預金</td><td class="right">828.5万</td><td class="right">651.3万</td><td class="right red" style="font-weight:700">317.0万</td></tr>
+<tr><td>売掛金</td><td class="right">96.4万</td><td class="right">174.6万</td><td class="right">79.7万</td></tr>
+<tr><td>流動負債</td><td class="right">507.6万</td><td class="right">548.3万</td><td class="right">499.6万</td></tr>
+</table>
+</div>
+
+<div class="alert">
+<div class="alert-title">⚠️ 現預金が3ヶ月で▲511万円減少</div>
+月平均バーンレート約170万円。研修案件のクロージングなしの場合、5〜6月に資金枯渇リスク。
+</div>
+
+<h2>📈 MRR（月額定期収入）133万円</h2>
+<div class="card">
+<div class="bar-container"><div class="bar-label">檸檬会</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:#22c55e"></div></div><div class="bar-value">30万</div></div>
+<div class="bar-container"><div class="bar-label">ビイサイド</div><div class="bar-track"><div class="bar-fill" style="width:83%;background:#3b82f6"></div></div><div class="bar-value">25万</div></div>
+<div class="bar-container"><div class="bar-label">医師協同組合</div><div class="bar-track"><div class="bar-fill" style="width:83%;background:#a78bfa"></div></div><div class="bar-value">25万</div></div>
+<div class="bar-container"><div class="bar-label">スタンドケイ</div><div class="bar-track"><div class="bar-fill" style="width:67%;background:#eab308"></div></div><div class="bar-value">20万</div></div>
+<div class="bar-container"><div class="bar-label">MIRACREATION</div><div class="bar-track"><div class="bar-fill" style="width:50%;background:#06b6d4"></div></div><div class="bar-value">15万</div></div>
+<div class="bar-container"><div class="bar-label">ヒトヒネリ</div><div class="bar-track"><div class="bar-fill" style="width:33%;background:#f97316"></div></div><div class="bar-value">10万</div></div>
+<div class="bar-container"><div class="bar-label">SYNERGY</div><div class="bar-track"><div class="bar-fill" style="width:17%;background:#71717a"></div></div><div class="bar-value">5万</div></div>
+<div class="bar-container"><div class="bar-label">山一建設</div><div class="bar-track"><div class="bar-fill" style="width:10%;background:#71717a"></div></div><div class="bar-value">3万</div></div>
+</div>
+
+<h2>📉 MRR推移予測</h2>
+<div class="card">
+<table>
+<tr><th>月</th><th class="right">MRR</th><th>終了する契約</th></tr>
+<tr><td>4月</td><td class="right green" style="font-weight:600">133万</td><td style="font-size:12px;color:#71717a">ビイサイド開始(+25万)</td></tr>
+<tr><td>5月</td><td class="right yellow">80万</td><td style="font-size:12px;color:#ef4444">スタンドケイ▲20万、山一▲3万</td></tr>
+<tr><td>6月</td><td class="right red" style="font-weight:600">50万</td><td style="font-size:12px;color:#ef4444">医師協同▲25万、ヒトヒネリ▲10万</td></tr>
+<tr><td>7月</td><td class="right red">50万</td><td></td></tr>
+<tr><td>8月</td><td class="right red" style="font-weight:600">35万</td><td style="font-size:12px;color:#ef4444">MIRACREATION▲15万</td></tr>
+</table>
+</div>
+
+<h2>🎯 パイプライン（研修案件）</h2>
+<div class="card">
+<table>
+<tr><th>会社</th><th>ランク</th><th class="right">見込額</th><th>状態</th></tr>
+<tr><td>田中住建</td><td><span class="tag tag-a">A</span></td><td class="right" style="font-weight:600">160〜200万</td><td style="font-size:12px">提案中・5月開始予定</td></tr>
+<tr><td>水野産業</td><td><span class="tag tag-b">B</span></td><td class="right" style="font-weight:600">200〜240万</td><td style="font-size:12px">商談中・5〜6月開始</td></tr>
+<tr><td>パナソニックリビング近畿</td><td><span class="tag tag-b">B</span></td><td class="right">160万〜</td><td style="font-size:12px">提案中</td></tr>
+<tr><td>ヴァンガードテクノロジー</td><td><span class="tag tag-b">B</span></td><td class="right">160万〜</td><td style="font-size:12px">提案中</td></tr>
+<tr><td>カマダ工芸</td><td><span class="tag tag-b">B</span></td><td class="right">160万〜</td><td style="font-size:12px">提案中</td></tr>
+</table>
+<div style="font-size:12px;color:#a1a1aa;margin-top:8px">研修単価: 1人40万円（助成金75%→実費10万円/人）× 最低4名〜</div>
+</div>
+
+<h2>✅ 最優先アクション</h2>
+<div class="action">
+<div class="action-title">今すぐ</div>
+<ul>
+<li>田中住建・水野産業の研修クロージング（資金繰りの生命線）</li>
+<li>医師協同組合・スタンドケイの契約延長交渉（4月中）</li>
+<li>MFへの3月売上仕訳入力</li>
+</ul>
+</div>
+<div class="action">
+<div class="action-title">今月中</div>
+<ul>
+<li>パナソニック・ヴァンガード・カマダの提案クロージング</li>
+<li>MRR積み上げ（AI顧問契約の新規獲得）</li>
+</ul>
+</div>
+
+<div class="footer">
+株式会社キャナルAI ─ データソース: MoneyForward（3/25取得）+ Supabase CRM（3/30最新）
+</div>
+
+</body>
+</html>
